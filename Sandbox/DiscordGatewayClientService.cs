@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 
 using DiscordGateway.Gateway;
@@ -13,9 +14,14 @@ namespace Sandbox
     public class DiscordGatewayClientService
         : BackgroundService
     {
+        public DiscordGatewayClientService(IConfiguration configuration)
+            => _configuration = configuration;
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             stoppingToken.Register(() => Console.WriteLine("Shutting down"));
+
+            var botToken = _configuration["BotToken"];
 
             using var httpClient = new HttpClient()
             {
@@ -23,14 +29,14 @@ namespace Sandbox
             };
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
                 scheme: "Bot",
-                parameter: "ODYwNzkxOTE3NDA3MjQwMjMy.YOAY8Q.Nn6CTNSMC-2zDDsYqc74BPoQ86w");
+                parameter: botToken);
 
             var gatewayClient = DiscordGatewayClient.Create(
                 dispatchEventReceivedHandler:           new GatewayDispatchEventReceivedHandler(),
                 failureHandler:                         new GatewayPayloadSerializationFailedHandler(),
                 httpClient:                             httpClient,
                 options:                                new(
-                    authenticationToken:            "ODYwNzkxOTE3NDA3MjQwMjMy.YOAY8Q.Nn6CTNSMC-2zDDsYqc74BPoQ86w",
+                    authenticationToken:            botToken,
                     connectionProperties:           GatewayConnectionProperties.FromLibraryName("Test"),
                     intents:                        GatewayIntents.All,
                     offlineGuildMemberThreshold:    null,
@@ -44,5 +50,7 @@ namespace Sandbox
 
             await gatewayClient.RunAsync(stoppingToken);
         }
+
+        private readonly IConfiguration _configuration;
     }
 }
